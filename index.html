@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>11班地理知识渡劫*随机点名台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Favicon 图标 -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon.ico">
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="background-decoration"></div>
+    
+    <div class="container">
+        <!-- 炫彩标题 -->
+        <div class="creator-header">
+            <div class="creator-title">国旺制作</div>
+        </div>
+        
+        <div class="header">
+            <h1 class="title">11班地理知识渡劫*随机点名台</h1>
+            <p class="subtitle">探索1到53之间的随机点名，公平公正随机选择</p>
+        </div>
+        
+        <div class="content">
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-sliders-h"></i> 控制面板
+                </div>
+                
+                <div class="range-display">
+                    <div class="range-text">点名范围：<span class="range-highlight">1 到 53</span></div>
+                </div>
+                
+                <div class="count-selector">
+                    <label class="count-label" for="countInput">选择生成个数：</label>
+                    <input type="number" id="countInput" class="count-input" value="1" min="1" max="10">
+                </div>
+                
+                <button id="generateBtn" class="action-btn">
+                    <i class="fas fa-dice"></i> 开始随机点名
+                </button>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">点名次数</div>
+                        <div class="stat-value" id="generateCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">平均学号</div>
+                        <div class="stat-value" id="averageValue">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">已点人数</div>
+                        <div class="stat-value" id="uniqueCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">重复次数</div>
+                        <div class="stat-value" id="repeatCount">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-crystal-ball"></i> 点名结果
+                </div>
+                
+                <div class="result-display">
+                    <div class="result-label">被点到的学号是</div>
+                    <div class="result" id="currentResult">?</div>
+                    <div id="batchResults" class="batch-results"></div>
+                </div>
+                
+                <div class="history-container">
+                    <div class="history-title">
+                        <span>点名历史</span>
+                        <button id="clearHistory" class="clear-btn">
+                            <i class="fas fa-broom"></i> 清空记录
+                        </button>
+                    </div>
+                    <div class="history-list" id="historyList"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>11班地理知识渡劫*随机点名台 Copyright© By 蔡国旺 2025 | <a href="https://github.com">Github</a></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
