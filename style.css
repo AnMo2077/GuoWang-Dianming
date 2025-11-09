@@ -138,6 +138,19 @@ body {
     box-shadow: 0 8px 30px var(--shadow-light), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
+.panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 138, 128, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+}
+
 .panel-title {
     font-size: 1.4rem;
     font-weight: 700;
@@ -333,6 +346,18 @@ body {
     min-height: 300px;
 }
 
+.result-display::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at center, rgba(120, 119, 198, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+}
+
 .result-label {
     color: var(--text-secondary);
     font-size: 1.3rem;
@@ -403,25 +428,6 @@ body {
 .nameplate-back .nameplate-content {
     font-size: 4.5rem;
     font-weight: 900;
-}
-
-.nameplate.glow .nameplate-back {
-    background: linear-gradient(135deg, #ff0080, #ff8c00);
-    animation: nameplateGlow 2s ease-in-out infinite;
-}
-
-@keyframes nameplateGlow {
-    0%, 100% {
-        box-shadow: 
-            0 15px 35px rgba(255, 0, 128, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-    50% {
-        box-shadow: 
-            0 20px 45px rgba(255, 0, 128, 0.8),
-            0 0 60px rgba(255, 140, 0, 0.6),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
 }
 
 .batch-results {
@@ -622,7 +628,6 @@ body {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-
 /* 炫彩标题样式 - 修复旋转效果 */
 .creator-header {
     text-align: center;
@@ -770,6 +775,40 @@ body {
     filter: blur(15px);
 }
 
+/* 配置状态图标样式 */
+#configStatusIcon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--warning);
+    animation: pulse 1.5s infinite;
+    cursor: help;
+    border: 2px solid var(--surface);
+    box-shadow: 0 2px 8px var(--shadow-light);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--surface-variant);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
     .creator-title { 
@@ -777,6 +816,14 @@ body {
         padding: 12px 25px;
         animation: gradientShift 4s ease infinite, floatTitle 6s ease-in-out infinite, rotate3dMobile 8s linear infinite;
     }
+    
+    .title { font-size: 2.2rem; }
+    .container { padding: 24px; }
+    .panel { padding: 20px; }
+    .stats { grid-template-columns: 1fr; }
+    .nameplate-container { width: 180px; height: 110px; }
+    .nameplate-content { font-size: 3rem; }
+    .nameplate-back .nameplate-content { font-size: 3.5rem; }
     
     @keyframes rotate3dMobile {
         0% {
@@ -810,29 +857,6 @@ body {
                 scale(1);
         }
     }
-}
-
-@media (max-width: 480px) {
-    .creator-title { 
-        font-size: 2.2rem; 
-        padding: 8px 20px; 
-        letter-spacing: 2px;
-    }
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-    .creator-title { 
-        font-size: 2.8rem; 
-        padding: 12px 25px; 
-    }
-    .title { font-size: 2.2rem; }
-    .container { padding: 24px; }
-    .panel { padding: 20px; }
-    .stats { grid-template-columns: 1fr; }
-    .nameplate-container { width: 180px; height: 110px; }
-    .nameplate-content { font-size: 3rem; }
-    .nameplate-back .nameplate-content { font-size: 3.5rem; }
 }
 
 @media (max-width: 480px) {

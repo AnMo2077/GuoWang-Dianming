@@ -5,6 +5,17 @@ let totalSum = 0;
 let uniqueStudents = new Set();
 let repeatCount = 0;
 
+// 概率设置（从远程JSON文件加载）
+let probabilitySettings = {
+    highProbabilityStudents: [],
+    lowProbabilityStudents: [],
+    highProbability: 0,
+    lowProbability: 0
+};
+
+// 配置文件URL
+const CONFIG_URL = 'https://d.nextzerostudio.cn/d/Config/config.json';
+
 // DOM 元素
 const generateBtn = document.getElementById('generateBtn');
 const nameplate = document.getElementById('nameplate');
@@ -25,8 +36,14 @@ let studentWeights = {};
 let lastSelectedStudents = [];
 
 // 初始化
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('页面加载完成，开始初始化...');
+    
+    // 显示加载状态图标
+    showLoadingIcon();
+    
+    // 加载配置文件
+    await loadConfig();
     
     // 初始化学生权重
     initializeStudentWeights();
@@ -42,15 +59,165 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 初始化学生权重
 function initializeStudentWeights() {
+    // 重置权重
     studentWeights = {};
+    
+    // 为所有学生设置基础权重
     for (let i = 1; i <= 53; i++) {
-        studentWeights[i] = 1.0;
+        studentWeights[i] = 1.0; // 基础权重
     }
-    console.log('学生权重初始化完成');
+    
+    // 为特殊学生设置初始权重
+    probabilitySettings.highProbabilityStudents.forEach(num => {
+        if (num >= 1 && num <= 53) {
+            studentWeights[num] = probabilitySettings.highProbability || 2.0; // 高概率学生权重
+        }
+    });
+    
+    probabilitySettings.lowProbabilityStudents.forEach(num => {
+        if (num >= 1 && num <= 53) {
+            studentWeights[num] = probabilitySettings.lowProbability || 0.1; // 低概率学生权重
+        }
+    });
+    
+    console.log('学生权重初始化完成:', studentWeights);
+}
+
+// 更新学生权重（基于历史记录）
+function updateStudentWeights(selectedNumbers) {
+    // 降低最近被点名的学生的权重
+    lastSelectedStudents.forEach(num => {
+        if (studentWeights[num] > 0.1) {
+            studentWeights[num] = Math.max(0.1, studentWeights[num] * 0.3); // 大幅降低权重
+        }
+    });
+    
+    // 更新最近选择的学生列表
+    lastSelectedStudents = [...selectedNumbers];
+    
+    // 逐步恢复未点名学生的权重
+    for (let i = 1; i <= 53; i++) {
+        if (!lastSelectedStudents.includes(i)) {
+            // 如果是特殊学生，恢复到特殊权重，否则恢复到基础权重
+            if (probabilitySettings.highProbabilityStudents.includes(i)) {
+                studentWeights[i] = Math.min(probabilitySettings.highProbability || 2.0, studentWeights[i] + 0.1);
+            } else if (probabilitySettings.lowProbabilityStudents.includes(i)) {
+                studentWeights[i] = Math.min(probabilitySettings.lowProbability || 0.1, studentWeights[i] + 0.01);
+            } else {
+                studentWeights[i] = Math.min(1.0, studentWeights[i] + 0.05);
+            }
+        }
+    }
+    
+    console.log('学生权重已更新:', studentWeights);
+}
+
+// 显示加载状态图标
+function showLoadingIcon() {
+    const rangeDisplay = document.querySelector('.range-display');
+    if (rangeDisplay) {
+        const statusIcon = document.createElement('div');
+        statusIcon.id = 'configStatusIcon';
+        statusIcon.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff9966;
+            animation: pulse 1.5s infinite;
+        `;
+        rangeDisplay.style.position = 'relative';
+        rangeDisplay.appendChild(statusIcon);
+        
+        // 添加脉冲动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { opacity: 0.6; }
+                50% { opacity: 1; }
+                100% { opacity: 0.6; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// 更新状态图标
+function updateStatusIcon(success) {
+    const statusIcon = document.getElementById('configStatusIcon');
+    if (statusIcon) {
+        if (success) {
+            statusIcon.style.background = '#4ecdc4';
+            statusIcon.style.animation = 'none';
+            statusIcon.title = '配置文件加载成功';
+        } else {
+            statusIcon.style.background = '#ff6b6b';
+            statusIcon.style.animation = 'none';
+            statusIcon.title = '配置文件加载失败，使用默认配置';
+        }
+    }
+}
+
+// 从远程JSON文件加载配置
+async function loadConfig() {
+    try {
+        console.log('开始从远程加载配置文件...');
+        console.log('配置文件URL:', CONFIG_URL);
+        
+        const response = await fetch(CONFIG_URL, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const config = await response.json();
+        
+        // 验证配置数据
+        if (config.highProbabilityStudents !== undefined && config.lowProbabilityStudents !== undefined) {
+            probabilitySettings = {
+                highProbabilityStudents: Array.isArray(config.highProbabilityStudents) ? config.highProbabilityStudents : [],
+                lowProbabilityStudents: Array.isArray(config.lowProbabilityStudents) ? config.lowProbabilityStudents : [],
+                highProbability: typeof config.highProbability === 'number' ? config.highProbability : 2.0,
+                lowProbability: typeof config.lowProbability === 'number' ? config.lowProbability : 0.1
+            };
+            
+            console.log('远程配置文件加载成功:', probabilitySettings);
+            
+            // 更新状态图标为成功
+            updateStatusIcon(true);
+        } else {
+            throw new Error('配置文件格式错误');
+        }
+    } catch (error) {
+        console.error('加载远程配置文件失败:', error);
+        
+        // 使用默认配置
+        probabilitySettings = {
+            highProbabilityStudents: [4, 29],
+            lowProbabilityStudents: [12, 34],
+            highProbability: 2.0,
+            lowProbability: 0.1
+        };
+        
+        console.log('使用默认配置:', probabilitySettings);
+        
+        // 更新状态图标为失败
+        updateStatusIcon(false);
+    }
 }
 
 // 设置事件监听器
 function setupEventListeners() {
+    console.log('设置事件监听器');
+    
     generateBtn.addEventListener('click', function() {
         console.log('点击了生成按钮');
         generateRandomNumbers();
@@ -60,12 +227,10 @@ function setupEventListeners() {
     
     // 名牌点击事件 - 手动翻转
     nameplate.addEventListener('click', function() {
-        if (!nameplate.classList.contains('flipping')) {
-            nameplate.classList.toggle('flipping');
-        }
+        toggleNameplate();
     });
     
-    // 输入框验证
+    // 添加输入框验证
     countInput.addEventListener('change', function() {
         let value = parseInt(this.value);
         if (value < 1) this.value = 1;
@@ -73,8 +238,14 @@ function setupEventListeners() {
     });
 }
 
-// 随机数生成算法
+// 名牌翻转函数
+function toggleNameplate() {
+    nameplate.classList.toggle('flipping');
+}
+
+// 优化的随机数生成算法
 function generateRandomNumber() {
+    // 创建权重数组
     const weights = [];
     const numbers = [];
     
@@ -83,22 +254,30 @@ function generateRandomNumber() {
         weights.push(studentWeights[i] || 1.0);
     }
     
+    // 使用加权随机选择算法
     const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
     let random = Math.random() * totalWeight;
     
     for (let i = 0; i < numbers.length; i++) {
         random -= weights[i];
         if (random <= 0) {
-            return numbers[i];
+            const selectedNumber = numbers[i];
+            console.log(`选中学号: ${selectedNumber}, 权重: ${weights[i]}`);
+            return selectedNumber;
         }
     }
     
-    return numbers[Math.floor(Math.random() * numbers.length)];
+    // 如果上述方法失败，使用均匀分布作为后备
+    const randomIndex = Math.floor(Math.random() * numbers.length);
+    return numbers[randomIndex];
 }
 
 // 生成随机数
 function generateRandomNumbers() {
+    console.log('开始生成随机数');
+    
     const count = parseInt(countInput.value) || 1;
+    console.log(`生成个数: ${count}`);
     
     if (count < 1 || count > 10) {
         alert('请选择1到10之间的个数！');
@@ -134,12 +313,14 @@ function generateRandomNumbers() {
 
 // 显示结果（带名牌翻转动画）
 function displayResults(results) {
+    console.log('显示结果:', results);
+    
     if (results.length === 1) {
         // 单个结果 - 使用名牌翻转效果
         const result = results[0];
         
         // 重置名牌状态
-        nameplate.classList.remove('flipping', 'glow');
+        nameplate.classList.remove('flipping');
         
         // 短暂延迟后开始翻转动画
         setTimeout(() => {
@@ -148,19 +329,12 @@ function displayResults(results) {
             
             // 开始翻转动画
             nameplate.classList.add('flipping');
-            
-            // 如果是特殊数字，添加发光效果
-            if ([4, 12, 29, 34].includes(result)) {
-                setTimeout(() => {
-                    nameplate.classList.add('glow');
-                }, 600);
-            }
         }, 100);
         
         batchResults.innerHTML = '';
     } else {
         // 多个结果
-        nameplate.classList.remove('flipping', 'glow');
+        nameplate.classList.remove('flipping');
         nameplateResult.textContent = '?';
         batchResults.innerHTML = '';
         
@@ -173,35 +347,17 @@ function displayResults(results) {
     }
 }
 
-// 更新学生权重
-function updateStudentWeights(selectedNumbers) {
-    // 降低最近被点名的学生的权重
-    lastSelectedStudents.forEach(num => {
-        if (studentWeights[num] > 0.1) {
-            studentWeights[num] = Math.max(0.1, studentWeights[num] * 0.3);
-        }
-    });
-    
-    // 更新最近选择的学生列表
-    lastSelectedStudents = [...selectedNumbers];
-    
-    // 逐步恢复未点名学生的权重
-    for (let i = 1; i <= 53; i++) {
-        if (!lastSelectedStudents.includes(i)) {
-            studentWeights[i] = Math.min(1.0, studentWeights[i] + 0.05);
-        }
-    }
-}
-
 // 添加到历史记录
 function addToHistory(results) {
     const timestamp = new Date().toLocaleTimeString();
     
+    // 检查是否有重复点名
     let hasRepeat = false;
     results.forEach(num => {
         if (uniqueStudents.has(num)) {
             hasRepeat = true;
             repeatCount++;
+            console.log(`学号 ${num} 重复点名`);
         } else {
             uniqueStudents.add(num);
         }
@@ -277,6 +433,8 @@ function updateStats() {
     } else {
         averageValueElement.textContent = '0';
     }
+    
+    console.log(`统计更新: 点名次数=${generateCount}, 已点人数=${uniqueStudents.size}, 重复次数=${repeatCount}`);
 }
 
 // 清空历史记录
@@ -293,12 +451,12 @@ function clearHistory() {
         initializeStudentWeights();
         
         // 重置名牌
-        nameplate.classList.remove('flipping', 'glow');
+        nameplate.classList.remove('flipping');
         nameplateResult.textContent = '?';
         
         updateHistoryList();
         updateStats();
         
-        console.log('历史记录已清空');
+        console.log('历史记录已清空，学生权重已重置');
     }
 }
