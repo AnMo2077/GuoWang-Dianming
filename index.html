@@ -5,14 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>11班地理知识渡劫*随机点名台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Favicon 图标 -->
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon.ico">
 </head>
 <body>
     <!-- 背景装饰 -->
@@ -21,7 +15,7 @@
     <div class="container">
         <!-- 炫彩标题 -->
         <div class="creator-header">
-            <div class="creator-title">国旺制作</div>
+            <div class="creator-title" id="creatorTitle">国旺制作</div>
         </div>
         
         <div class="header">
@@ -75,7 +69,16 @@
                 
                 <div class="result-display">
                     <div class="result-label">被点到的学号是</div>
-                    <div class="result" id="currentResult">?</div>
+                    <div class="nameplate-container">
+                        <div class="nameplate" id="nameplate">
+                            <div class="nameplate-front">
+                                <div class="nameplate-content">?</div>
+                            </div>
+                            <div class="nameplate-back">
+                                <div class="nameplate-content" id="nameplateResult">?</div>
+                            </div>
+                        </div>
+                    </div>
                     <div id="batchResults" class="batch-results"></div>
                 </div>
                 
@@ -92,7 +95,13 @@
         </div>
         
         <div class="footer">
-            <p>11班地理知识渡劫*随机点名台 Copyright© By 蔡国旺 2025 | <a href="https://github.com">Github</a></p>
+            <div class="github-section">
+                <a href="https://github.com/AnMo2077/GuoWang-Dianming" class="github-btn" target="_blank">
+                    <i class="fab fa-github"></i>
+                    <span>Github</span>
+                </a>
+            </div>
+            <p>11班地理知识渡劫*随机点名台 Copyright© By 蔡国旺 2025</p>
         </div>
     </div>
 
