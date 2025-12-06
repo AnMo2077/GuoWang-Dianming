@@ -203,6 +203,18 @@ function startDrawAnimation() {
     // 重置进度
     activeDrawIndex = 0;
     currentStep = 0;
+    
+    // 确保drawResults数组与当前drawCount匹配
+    drawResults = [];
+    for (let i = 0; i < drawCount; i++) {
+        drawResults.push({
+            initialNumber: 0,
+            steps: [],
+            finalResult: 0,
+            completed: false
+        });
+    }
+    
     updateProgress();
     
     // 开始第一个点名
@@ -219,7 +231,7 @@ function startSingleDraw(drawIndex) {
     
     // 显示初始数字抽取动画
     let animationCount = 0;
-    const maxAnimationCount = 25; // 减少动画帧数，加快速度
+    const maxAnimationCount = 40; // 增加动画帧数，减慢速度
     
     const drawItemNumberEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-number`);
     const drawItemCalcEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-calculation`);
@@ -357,6 +369,7 @@ function startCalculationSteps(drawIndex) {
         
         // 显示运算过程
         drawItemCalcEl.textContent = `步骤 ${currentStep + 1}: ${calculation.equation}`;
+        drawItemCalcEl.classList.add('highlight-animation'); // 为算式添加高亮动画
         drawItemNumberEl.textContent = calculation.result;
         drawItemNumberEl.classList.add('highlight-animation');
         
@@ -367,7 +380,7 @@ function startCalculationSteps(drawIndex) {
         calculationDisplayEl.innerHTML = `
             <span style="font-size: 2rem; color: #ffcc00">点名 #${drawIndex + 1}</span>
             <span style="margin: 0 10px">→</span>
-            <span style="font-size: 1.8rem">${calculation.equation}</span>
+            <span class="equation-animation" style="font-size: 1.8rem">${calculation.equation}</span>
         `;
         
         calculationStepEl.textContent = `点名 #${drawIndex + 1} 第${currentStep + 1}步运算`;
@@ -379,8 +392,9 @@ function startCalculationSteps(drawIndex) {
         // 继续下一步
         setTimeout(() => {
             drawItemNumberEl.classList.remove('highlight-animation');
+            drawItemCalcEl.classList.remove('highlight-animation'); // 移除算式高亮动画
             executeStep();
-        }, 700); // 减少延迟时间
+        }, 1200); // 增加延迟时间，减慢计算速度
     }
     
     // 开始执行第一步
@@ -525,7 +539,18 @@ function resetAll() {
     
     isDrawing = false;
     activeDrawIndex = 0;
+    
+    // 确保drawResults数组与当前drawCount匹配
     drawResults = [];
+    for (let i = 0; i < drawCount; i++) {
+        drawResults.push({
+            initialNumber: 0,
+            steps: [],
+            finalResult: 0,
+            completed: false
+        });
+    }
+    
     calculationSteps = [];
     currentStep = 0;
     
