@@ -1,462 +1,640 @@
 // 全局变量
-let history = [];
-let generateCount = 0;
-let totalSum = 0;
-let uniqueStudents = new Set();
-let repeatCount = 0;
+let isDrawing = false;
+let drawCount = 3; // 默认点名数量
+let stepCount = 3; // 默认运算步骤
+let activeDrawIndex = 0; // 当前正在计算的点名索引
+let drawResults = []; // 存储所有点名结果
+let drawInterval;
+let calculationSteps = [];
+let currentStep = 0;
+let history = []; // 历史记录
+let remoteConfig = { high: [], no: [] }; // 远程配置，默认空数组
 
-// 概率设置（从远程JSON文件加载）
-let probabilitySettings = {
-    highProbabilityStudents: [],
-    lowProbabilityStudents: [],
-    highProbability: 0,
-    lowProbability: 0
-};
+// DOM元素
+const drawCountInput = document.getElementById('drawCount');
+const stepCountInput = document.getElementById('stepCount');
+const currentDrawCountEl = document.getElementById('currentDrawCount');
+const multiDrawContainer = document.getElementById('multiDrawContainer');
+const calculationDisplayEl = document.getElementById('calculationDisplay');
+const calculationStepEl = document.getElementById('calculationStep');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const statusMessageEl = document.getElementById('statusMessage');
+const progressBarEl = document.getElementById('progressBar');
+const progressTextEl = document.getElementById('progressText');
+const historyContainer = document.getElementById('historyContainer');
+const emptyHistoryMessage = document.getElementById('emptyHistoryMessage');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const themeToggleBtn = document.getElementById('themeToggle');
 
-// 配置文件URL
-const CONFIG_URL = 'https://d.nextzerostudio.cn/d/Config/config.json';
-
-// DOM 元素
-const generateBtn = document.getElementById('generateBtn');
-const nameplate = document.getElementById('nameplate');
-const nameplateResult = document.getElementById('nameplateResult');
-const historyList = document.getElementById('historyList');
-const clearHistoryBtn = document.getElementById('clearHistory');
-const countInput = document.getElementById('countInput');
-const batchResults = document.getElementById('batchResults');
-
-// 统计元素
-const generateCountElement = document.getElementById('generateCount');
-const averageValueElement = document.getElementById('averageValue');
-const uniqueCountElement = document.getElementById('uniqueCount');
-const repeatCountElement = document.getElementById('repeatCount');
-
-// 学生状态跟踪
-let studentWeights = {};
-let lastSelectedStudents = [];
-
-// 初始化
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('页面加载完成，开始初始化...');
+// 初始化多点名容器
+function initializeMultiDrawContainer() {
+    multiDrawContainer.innerHTML = '';
+    drawResults = [];
     
-    // 显示加载状态图标
-    showLoadingIcon();
-    
-    // 加载配置文件
-    await loadConfig();
-    
-    // 初始化学生权重
-    initializeStudentWeights();
-    
-    // 设置事件监听器
-    setupEventListeners();
-    
-    // 更新统计信息
-    updateStats();
-    
-    console.log('初始化完成');
-});
-
-// 初始化学生权重
-function initializeStudentWeights() {
-    // 重置权重
-    studentWeights = {};
-    
-    // 为所有学生设置基础权重
-    for (let i = 1; i <= 53; i++) {
-        studentWeights[i] = 1.0; // 基础权重
-    }
-    
-    // 为特殊学生设置初始权重
-    probabilitySettings.highProbabilityStudents.forEach(num => {
-        if (num >= 1 && num <= 53) {
-            studentWeights[num] = probabilitySettings.highProbability || 2.0; // 高概率学生权重
-        }
-    });
-    
-    probabilitySettings.lowProbabilityStudents.forEach(num => {
-        if (num >= 1 && num <= 53) {
-            studentWeights[num] = probabilitySettings.lowProbability || 0.1; // 低概率学生权重
-        }
-    });
-    
-    console.log('学生权重初始化完成:', studentWeights);
-}
-
-// 更新学生权重（基于历史记录）
-function updateStudentWeights(selectedNumbers) {
-    // 降低最近被点名的学生的权重
-    lastSelectedStudents.forEach(num => {
-        if (studentWeights[num] > 0.1) {
-            studentWeights[num] = Math.max(0.1, studentWeights[num] * 0.3); // 大幅降低权重
-        }
-    });
-    
-    // 更新最近选择的学生列表
-    lastSelectedStudents = [...selectedNumbers];
-    
-    // 逐步恢复未点名学生的权重
-    for (let i = 1; i <= 53; i++) {
-        if (!lastSelectedStudents.includes(i)) {
-            // 如果是特殊学生，恢复到特殊权重，否则恢复到基础权重
-            if (probabilitySettings.highProbabilityStudents.includes(i)) {
-                studentWeights[i] = Math.min(probabilitySettings.highProbability || 2.0, studentWeights[i] + 0.1);
-            } else if (probabilitySettings.lowProbabilityStudents.includes(i)) {
-                studentWeights[i] = Math.min(probabilitySettings.lowProbability || 0.1, studentWeights[i] + 0.01);
-            } else {
-                studentWeights[i] = Math.min(1.0, studentWeights[i] + 0.05);
-            }
-        }
-    }
-    
-    console.log('学生权重已更新:', studentWeights);
-}
-
-// 显示加载状态图标
-function showLoadingIcon() {
-    const rangeDisplay = document.querySelector('.range-display');
-    if (rangeDisplay) {
-        const statusIcon = document.createElement('div');
-        statusIcon.id = 'configStatusIcon';
-        statusIcon.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ff9966;
-            animation: pulse 1.5s infinite;
+    for (let i = 0; i < drawCount; i++) {
+        const drawItem = document.createElement('div');
+        drawItem.className = 'draw-item';
+        drawItem.id = `draw-item-${i}`;
+        drawItem.innerHTML = `
+            <div class="draw-item-title">
+                <span>点名 #${i + 1}</span>
+                <span class="draw-item-status">等待中</span>
+            </div>
+            <div class="draw-item-number">?</div>
+            <div class="draw-item-calculation">等待计算...</div>
+            <div class="draw-item-result"></div>
         `;
-        rangeDisplay.style.position = 'relative';
-        rangeDisplay.appendChild(statusIcon);
+        multiDrawContainer.appendChild(drawItem);
         
-        // 添加脉冲动画
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0% { opacity: 0.6; }
-                50% { opacity: 1; }
-                100% { opacity: 0.6; }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-// 更新状态图标
-function updateStatusIcon(success) {
-    const statusIcon = document.getElementById('configStatusIcon');
-    if (statusIcon) {
-        if (success) {
-            statusIcon.style.background = '#4ecdc4';
-            statusIcon.style.animation = 'none';
-            statusIcon.title = '配置文件加载成功';
-        } else {
-            statusIcon.style.background = '#ff6b6b';
-            statusIcon.style.animation = 'none';
-            statusIcon.title = '配置文件加载失败，使用默认配置';
-        }
-    }
-}
-
-// 从远程JSON文件加载配置
-async function loadConfig() {
-    try {
-        console.log('开始从远程加载配置文件...');
-        console.log('配置文件URL:', CONFIG_URL);
-        
-        const response = await fetch(CONFIG_URL, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
+        // 初始化结果对象
+        drawResults.push({
+            id: i,
+            initialNumber: 0,
+            steps: [],
+            finalResult: 0,
+            completed: false
         });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const config = await response.json();
-        
-        // 验证配置数据
-        if (config.highProbabilityStudents !== undefined && config.lowProbabilityStudents !== undefined) {
-            probabilitySettings = {
-                highProbabilityStudents: Array.isArray(config.highProbabilityStudents) ? config.highProbabilityStudents : [],
-                lowProbabilityStudents: Array.isArray(config.lowProbabilityStudents) ? config.lowProbabilityStudents : [],
-                highProbability: typeof config.highProbability === 'number' ? config.highProbability : 2.0,
-                lowProbability: typeof config.lowProbability === 'number' ? config.lowProbability : 0.1
-            };
-            
-            console.log('远程配置文件加载成功:', probabilitySettings);
-            
-            // 更新状态图标为成功
-            updateStatusIcon(true);
-        } else {
-            throw new Error('配置文件格式错误');
-        }
-    } catch (error) {
-        console.error('加载远程配置文件失败:', error);
-        
-        // 使用默认配置
-        probabilitySettings = {
-            highProbabilityStudents: [4, 29],
-            lowProbabilityStudents: [12, 34],
-            highProbability: 2.0,
-            lowProbability: 0.1
-        };
-        
-        console.log('使用默认配置:', probabilitySettings);
-        
-        // 更新状态图标为失败
-        updateStatusIcon(false);
     }
 }
 
-// 设置事件监听器
-function setupEventListeners() {
-    console.log('设置事件监听器');
+// 更新配置
+function updateConfig() {
+    drawCount = parseInt(drawCountInput.value) || 1;
+    if (drawCount < 1) drawCount = 1;
+    if (drawCount > 10) drawCount = 10;
     
-    generateBtn.addEventListener('click', function() {
-        console.log('点击了生成按钮');
-        generateRandomNumbers();
-    });
+    stepCount = parseInt(stepCountInput.value) || 3;
+    if (stepCount < 1) stepCount = 1;
+    if (stepCount > 5) stepCount = 5;
     
-    clearHistoryBtn.addEventListener('click', clearHistory);
+    currentDrawCountEl.textContent = drawCount;
+    drawCountInput.value = drawCount;
+    stepCountInput.value = stepCount;
     
-    // 名牌点击事件 - 手动翻转
-    nameplate.addEventListener('click', function() {
-        toggleNameplate();
-    });
-    
-    // 添加输入框验证
-    countInput.addEventListener('change', function() {
-        let value = parseInt(this.value);
-        if (value < 1) this.value = 1;
-        if (value > 10) this.value = 10;
-    });
+    initializeMultiDrawContainer();
+    resetAll();
 }
 
-// 名牌翻转函数
-function toggleNameplate() {
-    nameplate.classList.toggle('flipping');
-}
-
-// 优化的随机数生成算法
-function generateRandomNumber() {
-    // 创建权重数组
-    const weights = [];
+// 随机生成1-54之间的数字，考虑远程配置
+function getRandomNumber() {
     const numbers = [];
     
-    for (let i = 1; i <= 53; i++) {
+    // 基础数字池（1-54）
+    for (let i = 1; i <= 54; i++) {
         numbers.push(i);
-        weights.push(studentWeights[i] || 1.0);
     }
     
-    // 使用加权随机选择算法
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
-    
-    for (let i = 0; i < numbers.length; i++) {
-        random -= weights[i];
-        if (random <= 0) {
-            const selectedNumber = numbers[i];
-            console.log(`选中学号: ${selectedNumber}, 权重: ${weights[i]}`);
-            return selectedNumber;
+    // 为high数组中的每个数字增加权重（增加出现概率）
+    const highWeight = 3; // 每个high数字额外添加3次
+    remoteConfig.high.forEach(num => {
+        if (num >= 1 && num <= 54) {
+            for (let i = 0; i < highWeight; i++) {
+                numbers.push(num);
+            }
         }
-    }
+    });
     
-    // 如果上述方法失败，使用均匀分布作为后备
+    // 从加权后的数组中随机选择
     const randomIndex = Math.floor(Math.random() * numbers.length);
     return numbers[randomIndex];
 }
 
-// 生成随机数
-function generateRandomNumbers() {
-    console.log('开始生成随机数');
+// 生成随机运算
+function generateRandomCalculation(baseNumber) {
+    const operators = ['+', '-', '×', '÷'];
+    let operator = operators[Math.floor(Math.random() * operators.length)];
     
-    const count = parseInt(countInput.value) || 1;
-    console.log(`生成个数: ${count}`);
+    let operand, result;
     
-    if (count < 1 || count > 10) {
-        alert('请选择1到10之间的个数！');
-        return;
+    switch (operator) {
+        case '+':
+            operand = Math.floor(Math.random() * 20) + 1;
+            result = baseNumber + operand;
+            break;
+        case '-':
+            operand = Math.floor(Math.random() * Math.min(baseNumber - 1, 20)) + 1;
+            result = baseNumber - operand;
+            break;
+        case '×':
+            operand = Math.floor(Math.random() * 5) + 1;
+            result = baseNumber * operand;
+            break;
+        case '÷':
+            // 确保除法能整除
+            let divisors = [];
+            for (let i = 2; i <= Math.min(baseNumber, 10); i++) {
+                if (baseNumber % i === 0) divisors.push(i);
+            }
+        
+            if (divisors.length > 0) {
+                operand = divisors[Math.floor(Math.random() * divisors.length)];
+                result = baseNumber / operand;
+            } else {
+                // 如果不能整除，改为加法
+                operand = Math.floor(Math.random() * 20) + 1;
+                result = baseNumber + operand;
+                operator = '+';
+            }
+            break;
     }
     
-    const results = [];
-    const usedNumbers = new Set();
+    // 确保结果在1-54之间
+    while (result > 54 || result < 1) {
+        // 重新生成运算而不是递归调用
+        let newOperator = operators[Math.floor(Math.random() * operators.length)];
+        let newOperand, newResult;
+        
+        switch (newOperator) {
+            case '+':
+                newOperand = Math.floor(Math.random() * 20) + 1;
+                newResult = baseNumber + newOperand;
+                break;
+            case '-':
+                newOperand = Math.floor(Math.random() * Math.min(baseNumber - 1, 20)) + 1;
+                newResult = baseNumber - newOperand;
+                break;
+            case '×':
+                newOperand = Math.floor(Math.random() * 5) + 1;
+                newResult = baseNumber * newOperand;
+                break;
+            case '÷':
+                // 确保除法能整除
+                let divisors = [];
+                for (let i = 2; i <= Math.min(baseNumber, 10); i++) {
+                    if (baseNumber % i === 0) divisors.push(i);
+                }
+                
+                if (divisors.length > 0) {
+                    newOperand = divisors[Math.floor(Math.random() * divisors.length)];
+                    newResult = baseNumber / newOperand;
+                } else {
+                    // 如果不能整除，改为加法
+                    newOperand = Math.floor(Math.random() * 20) + 1;
+                    newResult = baseNumber + newOperand;
+                    newOperator = '+';
+                }
+                break;
+        }
+        
+        operator = newOperator;
+        operand = newOperand;
+        result = newResult;
+    }
     
-    // 生成不重复的数字
-    while (results.length < count && usedNumbers.size < 53) {
-        const newNumber = generateRandomNumber();
-        if (!usedNumbers.has(newNumber)) {
-            results.push(newNumber);
-            usedNumbers.add(newNumber);
+    return {
+        base: baseNumber,
+        operator: operator,
+        operand: operand,
+        result: Math.floor(result),
+        equation: `${baseNumber} ${operator} ${operand} = ${Math.floor(result)}`
+    };
+}
+
+// 开始点名过程
+function startDrawAnimation() {
+    if (isDrawing) return;
+    
+    isDrawing = true;
+    startBtn.disabled = true;
+    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 点名中...';
+    statusMessageEl.textContent = `开始点名 (${drawCount}个并行)...`;
+    
+    // 重置进度
+    activeDrawIndex = 0;
+    currentStep = 0;
+    updateProgress();
+    
+    // 开始第一个点名
+    startSingleDraw(activeDrawIndex);
+}
+
+// 开始单个点名
+function startSingleDraw(drawIndex) {
+    // 激活当前点名项
+    activateDrawItem(drawIndex);
+    
+    // 第一步：随机抽取初始数字
+    const initialNumber = getRandomNumber();
+    
+    // 显示初始数字抽取动画
+    let animationCount = 0;
+    const maxAnimationCount = 25; // 减少动画帧数，加快速度
+    
+    const drawItemNumberEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-number`);
+    const drawItemCalcEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-calculation`);
+    const drawItemStatusEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-status`);
+    
+    drawItemStatusEl.textContent = '抽取中...';
+    drawItemStatusEl.style.color = '#ffcc00';
+    
+    drawInterval = setInterval(() => {
+        // 生成随机数字用于动画效果
+        const randomNum = getRandomNumber();
+        
+        // 只更新数字，不频繁添加/移除CSS类
+        drawItemNumberEl.textContent = randomNum;
+        
+        animationCount++;
+        
+        // 动画结束后确定初始数字
+        if (animationCount >= maxAnimationCount) {
+            clearInterval(drawInterval);
+            
+            // 更新结果对象
+            drawResults[drawIndex].initialNumber = initialNumber;
+            
+            // 显示最终初始数字
+            drawItemNumberEl.textContent = initialNumber;
+            
+            // 使用setTimeout延迟添加高亮动画，避免与数字更新冲突
+            setTimeout(() => {
+                drawItemNumberEl.classList.add('highlight-animation');
+            }, 0);
+            
+            // 显示初始数字信息
+            drawItemCalcEl.textContent = `初始数字: ${initialNumber}`;
+            
+            statusMessageEl.textContent = `点名 #${drawIndex + 1}: 开始进行随机运算...`;
+            
+            // 开始运算步骤
+            setTimeout(() => {
+                startCalculationSteps(drawIndex);
+            }, 300); // 减少延迟时间，加快速度
+        }
+    }, 40); // 调整间隔，平衡流畅度和性能
+}
+
+// 开始计算步骤
+function startCalculationSteps(drawIndex) {
+    const drawItem = drawResults[drawIndex];
+    const drawItemNumberEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-number`);
+    const drawItemCalcEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-calculation`);
+    const drawItemStatusEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-status`);
+    
+    // 重置当前步骤
+    currentStep = 0;
+    calculationSteps = [];
+    
+    // 执行运算步骤
+    function executeStep() {
+        if (currentStep >= stepCount) {
+            // 所有步骤完成
+            drawItem.finalResult = drawItem.initialNumber;
+            
+            // 计算最终结果（应用所有运算）
+            for (const step of drawItem.steps) {
+                drawItem.finalResult = step.result;
+            }
+            
+            // 检查结果是否在no数组中，如果是则重新开始这个点名
+            if (remoteConfig.no.includes(drawItem.finalResult)) {
+                console.log(`结果 ${drawItem.finalResult} 在排除列表中，重新抽取`);
+                drawItem.steps = [];
+                currentStep = 0;
+                
+                // 重新生成初始数字
+                const newInitialNumber = getRandomNumber();
+                drawItem.initialNumber = newInitialNumber;
+                drawItemNumberEl.textContent = newInitialNumber;
+                drawItemCalcEl.textContent = `初始数字: ${newInitialNumber}`;
+                
+                // 延迟后重新开始计算
+                setTimeout(() => {
+                    executeStep();
+                }, 200);
+                return;
+            }
+            
+            // 结果有效，标记完成
+            drawItem.completed = true;
+            
+            // 更新显示
+            const drawItemResultEl = document.querySelector(`#draw-item-${drawIndex} .draw-item-result`);
+            drawItemResultEl.textContent = `结果: ${drawItem.finalResult}号`;
+            drawItemResultEl.style.color = '#4cd964';
+            
+            drawItemStatusEl.textContent = '已完成';
+            drawItemStatusEl.style.color = '#4cd964';
+            
+            drawItemNumberEl.textContent = drawItem.finalResult;
+            drawItemNumberEl.classList.add('highlight-animation');
+            
+            statusMessageEl.textContent = `点名 #${drawIndex + 1} 完成! 结果: ${drawItem.finalResult}号`;
+            
+            // 更新进度
+            updateProgress();
+            
+            // 检查是否所有点名都完成
+            const allCompleted = drawResults.every(item => item.completed);
+            if (allCompleted) {
+                // 所有点名完成，添加到历史记录
+                addToHistory();
+                
+                // 结束点名过程
+                setTimeout(() => {
+                    endDrawing();
+                }, 1000);
+            } else {
+                // 开始下一个点名
+                setTimeout(() => {
+                    activeDrawIndex++;
+                    if (activeDrawIndex < drawCount) {
+                        startSingleDraw(activeDrawIndex);
+                    }
+                }, 800);
+            }
+            
+            return;
+        }
+        
+        // 生成随机运算
+        const currentNumber = currentStep === 0 ? drawItem.initialNumber : drawItem.steps[currentStep - 1].result;
+        const calculation = generateRandomCalculation(currentNumber);
+        
+        // 保存运算步骤
+        drawItem.steps.push(calculation);
+        
+        // 显示运算过程
+        drawItemCalcEl.textContent = `步骤 ${currentStep + 1}: ${calculation.equation}`;
+        drawItemNumberEl.textContent = calculation.result;
+        drawItemNumberEl.classList.add('highlight-animation');
+        
+        drawItemStatusEl.textContent = `计算中 (${currentStep + 1}/${stepCount})`;
+        drawItemStatusEl.style.color = '#ff8a00';
+        
+        // 更新主显示区域
+        calculationDisplayEl.innerHTML = `
+            <span style="font-size: 2rem; color: #ffcc00">点名 #${drawIndex + 1}</span>
+            <span style="margin: 0 10px">→</span>
+            <span style="font-size: 1.8rem">${calculation.equation}</span>
+        `;
+        
+        calculationStepEl.textContent = `点名 #${drawIndex + 1} 第${currentStep + 1}步运算`;
+        
+        // 更新进度
+        currentStep++;
+        updateProgress();
+        
+        // 继续下一步
+        setTimeout(() => {
+            drawItemNumberEl.classList.remove('highlight-animation');
+            executeStep();
+        }, 700); // 减少延迟时间
+    }
+    
+    // 开始执行第一步
+    executeStep();
+}
+
+// 激活点名项
+function activateDrawItem(drawIndex) {
+    // 移除所有激活状态
+    document.querySelectorAll('.draw-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // 激活当前点名项
+    const currentDrawItem = document.getElementById(`draw-item-${drawIndex}`);
+    if (currentDrawItem) {
+        currentDrawItem.classList.add('active');
+    }
+}
+
+// 更新进度
+function updateProgress() {
+    // 计算总体进度
+    let completedSteps = 0;
+    let totalSteps = drawCount * stepCount;
+    
+    for (const draw of drawResults) {
+        completedSteps += draw.steps.length;
+        if (draw.completed) {
+            completedSteps += (stepCount - draw.steps.length);
         }
     }
     
-    console.log('生成结果:', results);
+    const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
     
-    // 显示结果
-    displayResults(results);
-    
-    // 添加到历史记录
-    addToHistory(results);
-    
-    // 更新学生权重
-    updateStudentWeights(results);
-    
-    // 更新统计信息
-    updateStats();
-}
-
-// 显示结果（带名牌翻转动画）
-function displayResults(results) {
-    console.log('显示结果:', results);
-    
-    if (results.length === 1) {
-        // 单个结果 - 使用名牌翻转效果
-        const result = results[0];
-        
-        // 重置名牌状态
-        nameplate.classList.remove('flipping');
-        
-        // 短暂延迟后开始翻转动画
-        setTimeout(() => {
-            // 更新背面内容
-            nameplateResult.textContent = result;
-            
-            // 开始翻转动画
-            nameplate.classList.add('flipping');
-        }, 100);
-        
-        batchResults.innerHTML = '';
-    } else {
-        // 多个结果
-        nameplate.classList.remove('flipping');
-        nameplateResult.textContent = '?';
-        batchResults.innerHTML = '';
-        
-        results.forEach(num => {
-            const numberElement = document.createElement('div');
-            numberElement.className = 'batch-number';
-            numberElement.textContent = num;
-            batchResults.appendChild(numberElement);
-        });
-    }
+    progressBarEl.style.width = `${progressPercent}%`;
+    progressTextEl.textContent = `${completedSteps}/${totalSteps}`;
 }
 
 // 添加到历史记录
-function addToHistory(results) {
-    const timestamp = new Date().toLocaleTimeString();
-    
-    // 检查是否有重复点名
-    let hasRepeat = false;
-    results.forEach(num => {
-        if (uniqueStudents.has(num)) {
-            hasRepeat = true;
-            repeatCount++;
-            console.log(`学号 ${num} 重复点名`);
-        } else {
-            uniqueStudents.add(num);
-        }
+function addToHistory() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('zh-CN', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
     });
     
-    if (results.length === 1) {
-        history.unshift({
-            type: 'single',
-            value: results[0],
-            timestamp: timestamp,
-            isRepeat: hasRepeat
-        });
-        
-        generateCount++;
-        totalSum += results[0];
-    } else {
-        history.unshift({
-            type: 'batch',
-            values: results,
-            timestamp: timestamp,
-            isRepeat: hasRepeat
-        });
-        
-        generateCount += results.length;
-        results.forEach(num => totalSum += num);
+    const historyItem = {
+        id: history.length + 1,
+        time: timeStr,
+        drawCount: drawCount,
+        results: drawResults.map(draw => ({
+            finalResult: draw.finalResult,
+            steps: draw.steps
+        }))
+    };
+    
+    history.unshift(historyItem); // 添加到开头
+    
+    // 只保留最近10条记录
+    if (history.length > 10) {
+        history = history.slice(0, 10);
     }
     
-    // 限制历史记录长度
-    if (history.length > 50) {
-        history = history.slice(0, 50);
-    }
-    
-    updateHistoryList();
+    updateHistoryDisplay();
 }
 
-// 更新历史记录列表
-function updateHistoryList() {
-    historyList.innerHTML = '';
+// 更新历史记录显示
+function updateHistoryDisplay() {
+    historyContainer.innerHTML = '';
+    
+    if (history.length === 0) {
+        emptyHistoryMessage.style.display = 'block';
+        return;
+    }
+    
+    emptyHistoryMessage.style.display = 'none';
     
     history.forEach(item => {
-        const historyItem = document.createElement('div');
-        historyItem.className = 'history-item';
+        const historyItemEl = document.createElement('div');
+        historyItemEl.className = 'history-item';
         
-        if (item.isRepeat) {
-            historyItem.style.borderLeft = '2px solid #ff6b6b';
-        }
+        // 生成运算公式字符串
+        let equations = '';
+        item.results.forEach((result, index) => {
+            if (result.steps.length > 0) {
+                const stepsStr = result.steps.map(step => step.equation).join(' → ');
+                equations += `点名${index + 1}: ${stepsStr}<br>`;
+            }
+        });
         
-        if (item.type === 'single') {
-            historyItem.innerHTML = `
-                <span>学号: ${item.value} ${item.isRepeat ? '<i class="fas fa-redo-alt" style="color: #ff6b6b; margin-left: 5px;"></i>' : ''}</span>
-                <span>${item.timestamp}</span>
-            `;
-        } else {
-            historyItem.innerHTML = `
-                <span>学号: ${item.values.join(', ')} ${item.isRepeat ? '<i class="fas fa-redo-alt" style="color: #ff6b6b; margin-left: 5px;"></i>' : ''}</span>
-                <span>${item.timestamp}</span>
-            `;
-        }
+        historyItemEl.innerHTML = `
+            <div class="history-item-header">
+                <span>点名批次 #${item.id}</span>
+                <span class="history-item-time">${item.time}</span>
+            </div>
+            <div class="history-item-numbers">
+                ${item.results.map((result, index) => `
+                    <div class="history-number">
+                        <i class="fas fa-user"></i>
+                        点名${index + 1}: ${result.finalResult}号
+                    </div>
+                `).join('')}
+            </div>
+            <div class="history-item-equation">
+                ${equations}
+            </div>
+        `;
         
-        historyList.appendChild(historyItem);
+        historyContainer.appendChild(historyItemEl);
     });
-}
-
-// 更新统计信息
-function updateStats() {
-    generateCountElement.textContent = generateCount;
-    uniqueCountElement.textContent = uniqueStudents.size;
-    repeatCountElement.textContent = repeatCount;
-    
-    if (generateCount > 0) {
-        const average = (totalSum / generateCount).toFixed(2);
-        averageValueElement.textContent = average;
-    } else {
-        averageValueElement.textContent = '0';
-    }
-    
-    console.log(`统计更新: 点名次数=${generateCount}, 已点人数=${uniqueStudents.size}, 重复次数=${repeatCount}`);
 }
 
 // 清空历史记录
 function clearHistory() {
     if (confirm('确定要清空所有历史记录吗？')) {
         history = [];
-        generateCount = 0;
-        totalSum = 0;
-        uniqueStudents.clear();
-        repeatCount = 0;
-        lastSelectedStudents = [];
-        
-        // 重新初始化学生权重
-        initializeStudentWeights();
-        
-        // 重置名牌
-        nameplate.classList.remove('flipping');
-        nameplateResult.textContent = '?';
-        
-        updateHistoryList();
-        updateStats();
-        
-        console.log('历史记录已清空，学生权重已重置');
+        updateHistoryDisplay();
     }
 }
+
+// 结束点名
+function endDrawing() {
+    isDrawing = false;
+    startBtn.disabled = false;
+    startBtn.innerHTML = '<i class="fas fa-play"></i> 开始点名';
+    
+    statusMessageEl.textContent = `点名完成! 共完成 ${drawCount} 个点名`;
+    statusMessageEl.style.color = '#4cd964';
+    
+    // 移除所有激活状态
+    document.querySelectorAll('.draw-item').forEach(item => {
+        item.classList.remove('active');
+    });
+}
+
+// 重置所有数据
+function resetAll() {
+    clearInterval(drawInterval);
+    
+    isDrawing = false;
+    activeDrawIndex = 0;
+    drawResults = [];
+    calculationSteps = [];
+    currentStep = 0;
+    
+    calculationDisplayEl.textContent = '点击开始按钮进行随机抽取';
+    calculationStepEl.textContent = '';
+    
+    statusMessageEl.textContent = '准备就绪，点击开始按钮';
+    statusMessageEl.style.color = '#a3a3ff';
+    
+    progressBarEl.style.width = '0%';
+    progressTextEl.textContent = '0/0';
+    
+    startBtn.disabled = false;
+    startBtn.innerHTML = '<i class="fas fa-play"></i> 开始点名';
+    
+    initializeMultiDrawContainer();
+}
+
+// 主题切换功能
+function toggleTheme() {
+    const body = document.body;
+    const isDark = !body.classList.contains('light-theme');
+    
+    if (isDark) {
+        body.classList.add('light-theme');
+        themeToggleBtn.classList.remove('dark');
+        themeToggleBtn.classList.add('light');
+        themeToggleBtn.innerHTML = '<i class="fas"></i> 深色主题';
+    } else {
+        body.classList.remove('light-theme');
+        themeToggleBtn.classList.remove('light');
+        themeToggleBtn.classList.add('dark');
+        themeToggleBtn.innerHTML = '<i class="fas"></i> 浅色主题';
+    }
+    
+    // 保存主题设置到localStorage
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+
+// 获取远程配置
+async function fetchRemoteConfig() {
+    const configStatus = document.getElementById('configStatus');
+    
+    try {
+        const response = await fetch('https://d.nextzerostudio.cn/d/Config/config.json');
+        if (response.ok) {
+            const config = await response.json();
+            // 验证配置格式
+            if (Array.isArray(config.high)) {
+                remoteConfig.high = config.high.filter(item => typeof item === 'number');
+            }
+            if (Array.isArray(config.no)) {
+                remoteConfig.no = config.no.filter(item => typeof item === 'number');
+            }
+            console.log('远程配置加载成功:', remoteConfig);
+            
+            // 更新状态图标为成功
+            configStatus.className = 'config-status success';
+        } else {
+            // 响应不OK
+            configStatus.className = 'config-status error';
+        }
+    } catch (error) {
+        console.error('加载远程配置失败:', error);
+        // 使用默认配置
+        remoteConfig = { high: [], no: [] };
+        
+        // 更新状态图标为失败
+        configStatus.className = 'config-status error';
+    }
+}
+
+// 初始化主题
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const body = document.body;
+    
+    if (savedTheme === 'light') {
+        body.classList.add('light-theme');
+        themeToggleBtn.classList.remove('dark');
+        themeToggleBtn.classList.add('light');
+        themeToggleBtn.innerHTML = '<i class="fas"></i> 深色主题';
+    } else {
+        body.classList.remove('light-theme');
+        themeToggleBtn.classList.remove('light');
+        themeToggleBtn.classList.add('dark');
+        themeToggleBtn.innerHTML = '<i class="fas"></i> 浅色主题';
+    }
+}
+
+// 事件监听
+startBtn.addEventListener('click', startDrawAnimation);
+resetBtn.addEventListener('click', resetAll);
+clearHistoryBtn.addEventListener('click', clearHistory);
+themeToggleBtn.addEventListener('click', toggleTheme);
+
+// 配置变更监听
+drawCountInput.addEventListener('change', updateConfig);
+stepCountInput.addEventListener('change', updateConfig);
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', async function() {
+    updateConfig();
+    updateHistoryDisplay();
+    initializeTheme();
+    
+    // 加载远程配置
+    await fetchRemoteConfig();
+    
+    // 定期更新配置（每30秒）
+    setInterval(fetchRemoteConfig, 30000);
+});

@@ -3,113 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>11班地理知识渡劫*随机点名台</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- Favicon 图标 - 指向同级目录 -->
+    <title>随机点名系统</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 背景装饰 -->
-    <div class="background-decoration"></div>
-    
+    <button id="themeToggle" class="theme-toggle dark">
+        <i class="fas fa-moon"></i>
+        <span>浅色主题</span>
+    </button>
     <div class="container">
-        <!-- 炫彩标题 -->
-        <div class="creator-header">
-            <div class="creator-title" id="creatorTitle">国旺制作</div>
+        <header>
+            <div class="creator-title">国旺制作</div>
+            <h1><i class="fas fa-random"></i> 随机点名系统3.0</h1>
+            <p class="subtitle">随机抽取数字并进行随机运算，支持多点名并行计算</p>
+        </header>
+        
+        <div class="config-panel">
+            <h2 class="config-title"><i class="fas fa-cog"></i> 点名设置</h2>
+            <div id="configStatus" class="config-status"><i class="fas fa-circle"></i></div>
+            <div class="config-controls">
+                <div class="config-group">
+                    <label class="config-label">点名数量：</label>
+                    <input type="number" id="drawCount" class="config-input" min="1" max="10" value="1">
+                </div>
+                <div class="config-group">
+                    <label class="config-label">运算步骤：</label>
+                    <input type="number" id="stepCount" class="config-input" min="1" max="5" value="3">
+                </div>
+                <div class="config-group" style="display: none;">
+                    <label class="config-label">数字范围：</label>
+                    <input type="text" id="numberRange" class="config-input" value="1-54" readonly>
+                </div>
+            </div>
         </div>
         
-        <div class="header">
-            <h1 class="title">11班地理知识渡劫*随机点名台</h1>
-            <p class="subtitle">探索1到53之间的随机点名，公平公正随机选择</p>
-        </div>
-        
-        <div class="content">
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-sliders-h"></i> 控制面板
+        <div class="main-content">
+            <div class="drawing-panel panel">
+                <h2 class="panel-title">
+                    <span><i class="fas fa-dice"></i> 随机点名与运算</span>
+                    <span id="activeDrawTitle">同时抽取: <span id="currentDrawCount">1</span>个</span>
+                </h2>
+                
+                <div class="multi-draw-container" id="multiDrawContainer">
+                    <!-- 多点名容器将在这里动态生成 -->
                 </div>
                 
-                <div class="range-display">
-                    <div class="range-text">点名范围：<span class="range-highlight">1 到 53</span></div>
+                <div class="calculation-container">
+                    <div class="calculation-display" id="calculationDisplay">
+                        点击开始按钮进行随机抽取
+                    </div>
+                    <div class="calculation-step" id="calculationStep"></div>
                 </div>
                 
-                <div class="count-selector">
-                    <label class="count-label" for="countInput">选择生成个数：</label>
-                    <input type="number" id="countInput" class="count-input" value="1" min="1" max="10">
+                <div class="progress-container">
+                    <div class="progress-text">
+                        <span>运算进度</span>
+                        <span id="progressText">0/3</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress" id="progressBar"></div>
+                    </div>
                 </div>
                 
-                <button id="generateBtn" class="action-btn">
-                    <i class="fas fa-dice"></i> 开始随机点名
-                </button>
+                <div class="status" id="statusMessage">
+                    准备就绪，点击开始按钮
+                </div>
                 
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-label">点名次数</div>
-                        <div class="stat-value" id="generateCount">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">平均学号</div>
-                        <div class="stat-value" id="averageValue">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">已点人数</div>
-                        <div class="stat-value" id="uniqueCount">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">重复次数</div>
-                        <div class="stat-value" id="repeatCount">0</div>
-                    </div>
+                <div class="controls">
+                    <button class="btn btn-primary" id="startBtn">
+                        <i class="fas fa-play"></i> 开始点名
+                    </button>
+                    <button class="btn btn-secondary" id="resetBtn">
+                        <i class="fas fa-redo"></i> 重新开始
+                    </button>
                 </div>
             </div>
             
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-crystal-ball"></i> 点名结果
-                </div>
+            <div class="history-panel panel">
+                <h2 class="panel-title">
+                    <span><i class="fas fa-history"></i> 历史记录</span>
+                    <button class="btn-clear" id="clearHistoryBtn" style="padding: 8px 15px; font-size: 0.9rem;">
+                        <i class="fas fa-trash"></i> 清空
+                    </button>
+                </h2>
                 
-                <div class="result-display">
-                    <div class="result-label">被点到的学号是</div>
-                    <div class="nameplate-container">
-                        <div class="nameplate" id="nameplate">
-                            <div class="nameplate-front">
-                                <div class="nameplate-content">?</div>
-                            </div>
-                            <div class="nameplate-back">
-                                <div class="nameplate-content" id="nameplateResult">?</div>
-                            </div>
-                        </div>
+                <div class="history-container" id="historyContainer">
+                    <div class="empty-history" id="emptyHistoryMessage">
+                        <i class="fas fa-history"></i>
+                        <p>暂无历史记录<br>开始点名后，结果将显示在这里</p>
                     </div>
-                    <div id="batchResults" class="batch-results"></div>
-                </div>
-                
-                <div class="history-container">
-                    <div class="history-title">
-                        <span>点名历史</span>
-                        <button id="clearHistory" class="clear-btn">
-                            <i class="fas fa-broom"></i> 清空记录
-                        </button>
-                    </div>
-                    <div class="history-list" id="historyList"></div>
+                    <!-- 历史记录将在这里动态生成 -->
                 </div>
             </div>
         </div>
         
-        <div class="footer">
-            <div class="github-section">
-                <a href="https://github.com/AnMo2077/GuoWang-Dianming" class="github-btn" target="_blank">
-                    <i class="fab fa-github"></i>
-                    <span>Github</span>
-                </a>
-            </div>
-            <p>11班地理知识渡劫*随机点名台 Copyright© By 蔡国旺 2025</p>
-        </div>
+        <footer>
+            <p>随机点名系统 &copy; 2025 | By 国旺</p>
+            <a href="https://github.com/AnMo2077/GuoWang-Dianming" target="_blank" class="btn btn-secondary">
+                <i class="fab fa-github"></i> GitHub仓库
+            </a>
+        </footer>
     </div>
 
     <script src="script.js"></script>
